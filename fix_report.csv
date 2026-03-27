@@ -1,8 +1,8 @@
 ﻿序号,标题,缺失字段,状态,补全_作者,补全_年份,补全_期刊会议,补全_卷号,补全_页码,补全_DOI,补全_URL
 2,基于深度学习的代码生成方法研究进展,doi,未找到,,,,,,,
 4,重新审视代码补全中的检索增强策略,"volume, start_page, doi",未找到-且严重缺失,,,,,,,
-5,Agentic retrieval-augmented generation: A survey on agentic rag,"volume, start_page, doi",部分补全(缺页码),Aditi Singh; Abul Ehtesham; Saket Kumar; Tala Talaei Khoei,2025,CoRR,abs/2501.09136,,10.48550/ARXIV.2501.09136,https://doi.org/10.48550/arXiv.2501.09136
+5,Agentic retrieval-augmented generation: A survey on agentic rag,"volume, start_page, doi",部分补全(缺页码),Aditi Singh; Abul Ehtesham; Saket Kumar; Tala Talaei Khoei,2025,CoRR,,,10.48550/ARXIV.2501.09136,https://doi.org/10.48550/arXiv.2501.09136
 6,AI-assisted Coding with Cody: Lessons from Context Retrieval and Evaluation for ,volume,"已补全(DBLP,100%)",Jan Hartman; Hitesh Sagtani; Julie Tibshirani; Rishabh Mehrotra,2024,RecSys,,748-750,10.1145/3640457.3688060,https://doi.org/10.1145/3640457.3688060
-7,ARCS: Agentic Retrieval-Augmented Code Synthesis with Iterative Refinement,"journal_name, volume, start_page, doi",部分补全(缺页码),Manish Bhattarai; Miguel Cordova; Javier E. Santos; Dan O&apos;Malley,2025,CoRR,abs/2504.20434,,10.48550/ARXIV.2504.20434,https://doi.org/10.48550/arXiv.2504.20434
+7,ARCS: Agentic Retrieval-Augmented Code Synthesis with Iterative Refinement,"journal_name, volume, start_page, doi",部分补全(缺页码),Manish Bhattarai; Miguel Cordova; Javier E. Santos; Dan O&apos;Malley,2025,CoRR,,,10.48550/ARXIV.2504.20434,https://doi.org/10.48550/arXiv.2504.20434
 8,AutoCodeRover: Autonomous Program Improvement,volume,"已补全(DBLP,100%)",Yuntong Zhang 0002; Haifeng Ruan; Zhiyu Fan; Abhik Roychoudhury,2024,ISSTA,,1592-1604,10.1145/3650212.3680384,https://doi.org/10.1145/3650212.3680384
-9,Benchmarking large language models in retrieval-augmented generation,doi,"已补全(DBLP,100%)",Jiawei Chen 0011; Hongyu Lin; Xianpei Han; Le Sun 0001,2024,AAAI,,17754-17762,10.1609/AAAI.V38I16.29728,https://doi.org/10.1609/aaai.v38i16.29728
+9,Benchmarking large language models in retrieval-augmented generation,doi,"已补全(CrossRef,100%)",Chen Jiawei; Lin Hongyu; Han Xianpei; Sun Le,2024,Proceedings of the AAAI Conference on Artificial Intelligence,38,17754-17762,10.1609/aaai.v38i16.29728,

@@ -193,14 +193,24 @@ def main():
         # 根据返回结果类型修正 Generic (13), Journal (17), Conference (10) 等类型
         old_ref_type = merged.get("ref_type", "")
         old_ref_name = merged.get("ref_type_name", "").lower()
-        has_formal_journal = bool(merged.get("journal_name"))
-        is_preprint = found_data.get("is_preprint", False) or "arxiv.org" in str(merged.get("url", "")).lower()
+        
+        current_journal = str(merged.get("journal_name", "")).lower()
+        
+        # 判断当前文献实质上是不是只是个预印本
+        is_preprint = (
+            found_data.get("is_preprint", False) 
+            or "arxiv.org" in str(merged.get("url", "")).lower()
+            or "arxiv" in current_journal
+            or "preprint" in current_journal
+        )
+        
+        # 判断是否拥有真正的正式发表出处
+        has_formal_journal = bool(current_journal) and not is_preprint
 
         if has_formal_journal:
-            # 对于 Generic 找到了正式出处，变为期刊或会议
-            if old_ref_type == "13" or old_ref_name == "generic":
-                jname_lower = merged["journal_name"].lower()
-                if any(w in jname_lower for w in ["conference", "proceedings", "symposium", "workshop", "meeting"]):
+            # 对于 Generic 或者原本被误认为是预印本的，找到了正式出处，变为期刊或会议
+            if old_ref_type in ["13", "43"] or old_ref_name in ["generic", "electronic article"]:
+                if any(w in current_journal for w in ["conference", "proceedings", "symposium", "workshop", "meeting"]):
                     merged["ref_type"] = "10"
                     merged["ref_type_name"] = "Conference Proceedings"
                 else:
@@ -210,7 +220,7 @@ def main():
             # 如果没有正式出处，且我们有确凿的预印本证据
             if is_preprint:
                 # 哪怕之前填的是期刊、会议或者 Generic，既然没有出处只靠预印本，就改成电子文章
-                if old_ref_type in ["17", "10", "13"] or old_ref_name in ["journal article", "conference proceedings", "generic"]:
+                if old_ref_type in ["17", "10", "13", ""] or old_ref_name in ["journal article", "conference proceedings", "generic", ""]:
                     merged["ref_type"] = "43"
                     merged["ref_type_name"] = "Electronic Article"
         # ==========================================
