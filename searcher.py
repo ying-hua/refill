@@ -48,13 +48,11 @@ def _parse_semantic_scholar(item: dict) -> Dict[str, Any]:
         data["authors"] = [a.get("name", "") for a in item["authors"]]
     if item.get("year"):
         data["year"] = str(item["year"])
-    venue = item.get("venue") or item.get("journal", {}).get("name", "")
+    venue = item.get("venue") or item.get("journal", {}).get("name", "")      
     if venue:
         # 如果获取到的场刊名包含预印本特征 (比如 arXiv)，且原文献明确需要补全出处，这里先不作为合法出处
         if "arxiv" in venue.lower():
-            # 我们先不去强行将其指定为 arXiv，因为用户期望找到正式期刊名。
-            # 这里故意抛弃这个预印本信息，继续让别的数据库补充或者保留空白。
-            pass
+            data["is_preprint"] = True
         else:
             data["journal_name"] = venue
     if item.get("volume"):
@@ -74,6 +72,7 @@ def _parse_semantic_scholar(item: dict) -> Dict[str, Any]:
     arxiv = item.get("externalIds", {}).get("ArXiv", "")
     if arxiv:
         data["url"] = f"https://arxiv.org/abs/{arxiv}"
+        data["is_preprint"] = True
     return data
 
 
@@ -112,7 +111,7 @@ def _parse_dblp(hit: dict) -> Dict[str, Any]:
     venue = info.get("venue", "")
     if venue:
         if "arxiv" in venue.lower():
-            pass
+            data["is_preprint"] = True
         else:
             data["journal_name"] = venue
     if info.get("volume"):
@@ -157,7 +156,7 @@ def search_dblp(title: str, min_score: float) -> Optional[Tuple[str, float, Dict
 # ──────────────────────────────────────────────
 
 def _parse_arxiv(entry: dict) -> Dict[str, Any]:
-    data = {}
+    data = {"is_preprint": True}
     authors = entry.get("author", [])
     if isinstance(authors, dict):
         authors = [authors]
@@ -221,7 +220,10 @@ def _parse_crossref(item: dict) -> Dict[str, Any]:
         data["year"] = str(date_parts[0][0])
     container = item.get("container-title", [])
     if container:
-        data["journal_name"] = container[0]
+        if "arxiv" in container[0].lower():
+            data["is_preprint"] = True
+        else:
+            data["journal_name"] = container[0]
     if item.get("volume"):
         vol_str = str(item["volume"])
         if vol_str.isdigit():

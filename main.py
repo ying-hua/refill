@@ -23,6 +23,13 @@ def load_endnote_xml(path):
     records = []
     for rec in root.findall(".//record"):
         r = {}
+        
+        # 记录类型 ref-type (如 Generic: 13, Journal: 17, Conference: 10, Electronic Article: 43)
+        rt_node = rec.find("ref-type")
+        if rt_node is not None:
+            r["ref_type"] = rt_node.text.strip() if rt_node.text else ""
+            r["ref_type_name"] = rt_node.attrib.get("name", "")
+
         # 标题
         title = rec.findtext(".//title/style") or rec.findtext(".//title")
         if title:
@@ -73,6 +80,16 @@ def _set_xml_node_text(rec_node, path, text):
 
 
 def update_xml_record(node, original, merged):
+    # 处理文献类型（ref-type）的变更
+    new_ref_type = merged.get("ref_type")
+    if new_ref_type and new_ref_type != original.get("ref_type"):
+        rt_node = node.find("ref-type")
+        if rt_node is None:
+            rt_node = ET.SubElement(node, "ref-type")
+        rt_node.text = new_ref_type
+        if merged.get("ref_type_name"):
+            rt_node.set("name", merged["ref_type_name"])
+
     for key, val in merged.items():
         if val == original.get(key) or not val:
             continue
@@ -80,7 +97,7 @@ def update_xml_record(node, original, merged):
             _set_xml_node_text(node, "dates/year", val)
         elif key == "journal_name":
             # 智能判断引用类型，EndNote里 17 代表期刊，其他(如 10, 47)通常用 secondary-title 存会议名
-            ref_type = node.findtext("ref-type")
+            ref_type = merged.get("ref_type") or node.findtext("ref-type")
             if ref_type == "17" or node.find("periodical") is not None:
                 _set_xml_node_text(node, "periodical/full-title", val)
             else:
@@ -171,10 +188,38 @@ def main():
 
         source, score, found_data = result
         merged = merge_record(record, found_data)
-        
+
+        # === 动态修正文献类型 (ref-type) 的逻辑 ===
+        # 根据返回结果类型修正 Generic (13), Journal (17), Conference (10) 等类型
+        old_ref_type = merged.get("ref_type", "")
+        old_ref_name = merged.get("ref_type_name", "").lower()
+        has_formal_journal = bool(merged.get("journal_name"))
+        is_preprint = found_data.get("is_preprint", False) or "arxiv.org" in str(merged.get("url", "")).lower()
+
+        if has_formal_journal:
+            # 对于 Generic 找到了正式出处，变为期刊或会议
+            if old_ref_type == "13" or old_ref_name == "generic":
+                jname_lower = merged["journal_name"].lower()
+                if any(w in jname_lower for w in ["conference", "proceedings", "symposium", "workshop", "meeting"]):
+                    merged["ref_type"] = "10"
+                    merged["ref_type_name"] = "Conference Proceedings"
+                else:
+                    merged["ref_type"] = "17"
+                    merged["ref_type_name"] = "Journal Article"
+        else:
+            # 如果没有正式出处，且我们有确凿的预印本证据
+            if is_preprint:
+                # 哪怕之前填的是期刊、会议或者 Generic，既然没有出处只靠预印本，就改成电子文章
+                if old_ref_type in ["17", "10", "13"] or old_ref_name in ["journal article", "conference proceedings", "generic"]:
+                    merged["ref_type"] = "43"
+                    merged["ref_type_name"] = "Electronic Article"
+        # ==========================================
+
         # 计算真正因为原本缺失而被成功补全的字段
-        actually_filled = [k for k in found_data.keys() if record.get(k) != merged.get(k)]
-        
+        actually_filled = [k for k in found_data.keys() if k != "is_preprint" and record.get(k) != merged.get(k)]
+        if merged.get("ref_type") != record.get("ref_type"):
+            actually_filled.append(f"类型变更为{merged.get('ref_type_name')}")
+
         # 检查核心字段是否由于网上的数据里也没有，导致最后依然没补全
         still_missing = []
         if "journal_name" in missing_fields and "journal_name" not in actually_filled:
