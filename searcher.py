@@ -52,7 +52,9 @@ def _parse_semantic_scholar(item: dict) -> Dict[str, Any]:
     if venue:
         data["journal_name"] = venue
     if item.get("volume"):
-        data["volume"] = str(item["volume"])
+        vol_str = str(item["volume"])
+        if vol_str.isdigit():
+            data["volume"] = vol_str
     pages = item.get("pages") or ""
     if pages and "-" in pages:
         parts = pages.split("-")
@@ -105,7 +107,9 @@ def _parse_dblp(hit: dict) -> Dict[str, Any]:
     if venue:
         data["journal_name"] = venue
     if info.get("volume"):
-        data["volume"] = str(info["volume"])
+        vol_str = str(info["volume"])
+        if vol_str.isdigit():
+            data["volume"] = vol_str
     pages = info.get("pages", "")
     if pages and "-" in pages:
         parts = pages.split("-")
@@ -209,7 +213,9 @@ def _parse_crossref(item: dict) -> Dict[str, Any]:
     if container:
         data["journal_name"] = container[0]
     if item.get("volume"):
-        data["volume"] = str(item["volume"])
+        vol_str = str(item["volume"])
+        if vol_str.isdigit():
+            data["volume"] = vol_str
     page = item.get("page", "")
     if page and "-" in page:
         parts = page.split("-")
