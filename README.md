@@ -4,21 +4,21 @@
 
 ```bash
 pip install -r requirements.txt
-python main.py --input my_library.ris --output fixed.ris --dry-run
+python main.py --input my_library.xml --output fixed.xml --dry-run
 ```
 
 dry-run 后查看 fix_report.csv，确认无误再正式写入：
 
 ```bash
-python main.py --input my_library.ris --output fixed.ris
+python main.py --input my_library.xml --output fixed.xml
 ```
 
 ## 参数说明
 
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
-| `--input` | 必填 | 输入 .ris 文件 |
-| `--output` | 必填 | 输出 .ris 文件 |
+| `--input` | 必填 | 输入 .xml 文件 |
+| `--output` | 必填 | 输出 .xml 文件 |
 | `--dry-run` | 关 | 只生成报告，不写入文件 |
 | `--min-score` | 90 | 标题相似度阈值（0-100） |
 | `--delay` | 0.5 | API 请求间隔秒数 |
@@ -30,13 +30,13 @@ python main.py --input my_library.ris --output fixed.ris
 3. **arXiv** — 预印本，最新 AI 论文必备
 4. **CrossRef** — 通用兜底
 
-## 从 EndNote 导出 RIS
+## 从 EndNote 导出 XML
 
-`File → Export → 格式选 RefMan (RIS)`
+`File → Export → 格式选 XML`
 
 ## 导回 EndNote
 
-`File → Import → File → Format: Reference Manager (RIS) → Import Option: Update existing references`
+`File → Import → File → Format: EndNote Generated XML → Import Option: Update existing references`
 
 ## 输出的 fix_report.csv 说明
 

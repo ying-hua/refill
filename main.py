@@ -9,18 +9,102 @@ import time
 import sys
 from pathlib import Path
 
-import rispy
 import pandas as pd
+import xml.etree.ElementTree as ET
 
 from detector import find_incomplete
 from searcher import search_paper
 from merger import merge_record, build_diff_row
 
 
+def load_endnote_xml(path):
+    tree = ET.parse(path)
+    root = tree.getroot()
+    records = []
+    for rec in root.findall(".//record"):
+        r = {}
+        # 标题
+        title = rec.findtext(".//title/style") or rec.findtext(".//title")
+        if title:
+            r["title"] = title.strip()
+        # 作者
+        authors = [a.findtext("style") or a.text or ""
+                   for a in rec.findall(".//contributors/authors/author")]
+        if authors:
+            r["authors"] = [a.strip() for a in authors if a.strip()]
+        # 年份
+        year = rec.findtext(".//dates/year/style") or rec.findtext(".//dates/year")
+        if year:
+            r["year"] = year.strip()
+        # 期刊
+        journal = rec.findtext(".//periodical/full-title/style") or \
+                  rec.findtext(".//periodical/full-title")
+        if journal:
+            r["journal_name"] = journal.strip()
+        # DOI
+        doi = rec.findtext(".//electronic-resource-num/style") or \
+              rec.findtext(".//electronic-resource-num")
+        if doi:
+            r["doi"] = doi.strip()
+        # 卷/页
+        r["volume"] = rec.findtext(".//volume/style") or rec.findtext(".//volume") or ""
+        r["start_page"] = rec.findtext(".//pages/style") or rec.findtext(".//pages") or ""
+        r["_xml_rec"] = rec  # 保留原始节点，写回时用
+        records.append(r)
+    return records, tree
+
+
+def _set_xml_node_text(rec_node, path, text):
+    parts = path.split("/")
+    curr = rec_node
+    for p in parts:
+        nxt = curr.find(p)
+        if nxt is None:
+            nxt = ET.SubElement(curr, p)
+        curr = nxt
+    style = curr.find("style")
+    if style is not None:
+        style.text = str(text)
+    else:
+        style = ET.SubElement(curr, "style", face="normal", font="default", size="100%")
+        style.text = str(text)
+
+
+def update_xml_record(node, original, merged):
+    for key, val in merged.items():
+        if val == original.get(key) or not val:
+            continue
+        if key == "year":
+            _set_xml_node_text(node, "dates/year", val)
+        elif key == "journal_name":
+            _set_xml_node_text(node, "periodical/full-title", val)
+        elif key == "volume":
+            _set_xml_node_text(node, "volume", val)
+        elif key in ["start_page", "pages"]:
+            page_val = val
+            if merged.get("end_page"):
+                page_val = f"{val}-{merged['end_page']}"
+            _set_xml_node_text(node, "pages", page_val)
+        elif key == "doi":
+            _set_xml_node_text(node, "electronic-resource-num", val)
+        elif key == "url":
+            _set_xml_node_text(node, "urls/related-urls/url", val)
+        elif key == "authors":
+            contrib = node.find("contributors")
+            if contrib is None: contrib = ET.SubElement(node, "contributors")
+            auths = contrib.find("authors")
+            if auths is None: auths = ET.SubElement(contrib, "authors")
+            else: auths.clear()
+            for a in val:
+                author_node = ET.SubElement(auths, "author")
+                style = ET.SubElement(author_node, "style", face="normal", font="default", size="100%")
+                style.text = a
+
+
 def main():
-    parser = argparse.ArgumentParser(description="自动补全 EndNote RIS 文件中缺失的字段")
-    parser.add_argument("--input",  required=True, help="输入 .ris 文件路径")
-    parser.add_argument("--output", required=True, help="输出 .ris 文件路径")
+    parser = argparse.ArgumentParser(description="自动补全 EndNote XML 文件中缺失的字段")
+    parser.add_argument("--input",  required=True, help="输入 .xml 文件路径")
+    parser.add_argument("--output", required=True, help="输出 .xml 文件路径")
     parser.add_argument("--dry-run", action="store_true",
                         help="只生成报告，不写入文件")
     parser.add_argument("--min-score", type=float, default=90.0,
@@ -35,8 +119,11 @@ def main():
         sys.exit(1)
 
     print(f"📖 读取文件: {input_path}")
-    with open(input_path, encoding="utf-8") as f:
-        records = rispy.load(f)
+    try:
+        records, tree = load_endnote_xml(str(input_path))
+    except Exception as e:
+        print(f"[错误] 解析 XML 失败: {e}")
+        sys.exit(1)
     print(f"   共 {len(records)} 条记录")
 
     incomplete = find_incomplete(records)
@@ -72,6 +159,7 @@ def main():
 
         merged = merge_record(record, found_data)
         updated_records[rec_idx] = merged
+        update_xml_record(merged["_xml_rec"], record, merged)
         diff_rows.append(build_diff_row(rec_idx, record, found_data, missing_fields,
                                         f"已补全({source},{score:.0f}%)"))
 
@@ -87,8 +175,7 @@ def main():
         return
 
     out_path = Path(args.output)
-    with open(out_path, "w", encoding="utf-8") as f:
-        rispy.dump(updated_records, f)
+    tree.write(str(out_path), encoding="utf-8", xml_declaration=True)
     print(f"💾 已写入: {out_path}")
     _print_summary(diff_rows)
 
