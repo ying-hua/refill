@@ -27,10 +27,10 @@ def merge_record(original: Dict, found: Dict) -> Dict:
     """
     merged = dict(original)
 
-    # 检查目标是否已有任何形式的页码信息
-    has_any_pages = not _is_empty(merged.get("start_page")) or 
-                    not _is_empty(merged.get("end_page")) or 
-                    not _is_empty(merged.get("pages"))
+    # 检查目标是否已包含任何页码信息
+    has_any_pages = (not _is_empty(merged.get("start_page")) or
+                     not _is_empty(merged.get("end_page")) or
+                     not _is_empty(merged.get("pages")))
 
     for key, value in found.items():
         # 如果已经存在某个类型的页码了，就跳过所有其他类型的页码的补全
