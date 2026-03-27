@@ -155,9 +155,12 @@ def main():
             continue
 
         source, score, found_data = result
-        print(f"   ✓ 命中 [{source}] 相似度={score:.1f}%  补全: {list(found_data.keys())}")
-
         merged = merge_record(record, found_data)
+        
+        # 计算真正因为原本缺失而被成功补全的字段
+        actually_filled = [k for k in found_data.keys() if record.get(k) != merged.get(k)]
+        print(f"   ✓ 命中 [{source}] 相似度={score:.1f}%  实际补全: {actually_filled}")
+
         updated_records[rec_idx] = merged
         update_xml_record(merged["_xml_rec"], record, merged)
         diff_rows.append(build_diff_row(rec_idx, record, found_data, missing_fields,
