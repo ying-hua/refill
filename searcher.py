@@ -50,7 +50,13 @@ def _parse_semantic_scholar(item: dict) -> Dict[str, Any]:
         data["year"] = str(item["year"])
     venue = item.get("venue") or item.get("journal", {}).get("name", "")
     if venue:
-        data["journal_name"] = venue
+        # 如果获取到的场刊名包含预印本特征 (比如 arXiv)，且原文献明确需要补全出处，这里先不作为合法出处
+        if "arxiv" in venue.lower():
+            # 我们先不去强行将其指定为 arXiv，因为用户期望找到正式期刊名。
+            # 这里故意抛弃这个预印本信息，继续让别的数据库补充或者保留空白。
+            pass
+        else:
+            data["journal_name"] = venue
     if item.get("volume"):
         vol_str = str(item["volume"])
         if vol_str.isdigit():
@@ -105,7 +111,10 @@ def _parse_dblp(hit: dict) -> Dict[str, Any]:
         data["year"] = str(info["year"])
     venue = info.get("venue", "")
     if venue:
-        data["journal_name"] = venue
+        if "arxiv" in venue.lower():
+            pass
+        else:
+            data["journal_name"] = venue
     if info.get("volume"):
         vol_str = str(info["volume"])
         if vol_str.isdigit():
@@ -157,7 +166,8 @@ def _parse_arxiv(entry: dict) -> Dict[str, Any]:
     published = entry.get("published", "")
     if published:
         data["year"] = published[:4]
-    data["journal_name"] = "arXiv"
+    # 我们不再强制在此处给 journal_name 赋值为 'arXiv'
+    # 这样当这篇论文缺少 journal 时，不会用 'arXiv' 去覆盖它
     arxiv_id = entry.get("id", "").split("/abs/")[-1]
     if arxiv_id:
         data["url"] = f"https://arxiv.org/abs/{arxiv_id}"
