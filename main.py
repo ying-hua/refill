@@ -36,9 +36,11 @@ def load_endnote_xml(path):
         year = rec.findtext(".//dates/year/style") or rec.findtext(".//dates/year")
         if year:
             r["year"] = year.strip()
-        # 期刊
+        # 期刊/会议名称(EndNote中期刊在periodical下，会议等一般在titles/secondary-title下)
         journal = rec.findtext(".//periodical/full-title/style") or \
-                  rec.findtext(".//periodical/full-title")
+                  rec.findtext(".//periodical/full-title") or \
+                  rec.findtext(".//titles/secondary-title/style") or \
+                  rec.findtext(".//titles/secondary-title")
         if journal:
             r["journal_name"] = journal.strip()
         # DOI
@@ -77,7 +79,12 @@ def update_xml_record(node, original, merged):
         if key == "year":
             _set_xml_node_text(node, "dates/year", val)
         elif key == "journal_name":
-            _set_xml_node_text(node, "periodical/full-title", val)
+            # 智能判断引用类型，EndNote里 17 代表期刊，其他(如 10, 47)通常用 secondary-title 存会议名
+            ref_type = node.findtext("ref-type")
+            if ref_type == "17" or node.find("periodical") is not None:
+                _set_xml_node_text(node, "periodical/full-title", val)
+            else:
+                _set_xml_node_text(node, "titles/secondary-title", val)
         elif key == "volume":
             _set_xml_node_text(node, "volume", val)
         elif key in ["start_page", "pages"]:
