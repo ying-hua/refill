@@ -151,14 +151,22 @@ def main():
             continue
 
         print(f"[{idx+1}/{len(incomplete)}] 搜索: {title[:60]}...")
-        print(f"   缺失字段: {', '.join(missing_fields)}")
+        missing_str = ", ".join(missing_fields)
+        # 如果缺了期刊/会议名或页码，控制台打一个醒目的警告
+        if "journal_name" in missing_fields or "start_page" in missing_fields:
+            print(f"   🚨 严重缺失: {missing_str} (注意: 此文献缺失核心出处或页码！)")
+        else:
+            print(f"   缺失字段: {missing_str}")
 
         result = search_paper(title, missing_fields, min_score=args.min_score)
         time.sleep(args.delay)
 
         if result is None:
+            msg = "未找到"
+            if "journal_name" in missing_fields or "start_page" in missing_fields:
+                msg = "未找到-且严重缺失"
             print(f"   ⚠ 未找到可信结果（相似度 < {args.min_score}%）")
-            diff_rows.append(build_diff_row(rec_idx, record, None, missing_fields, "未找到"))
+            diff_rows.append(build_diff_row(rec_idx, record, None, missing_fields, msg))
             continue
 
         source, score, found_data = result
@@ -166,12 +174,25 @@ def main():
         
         # 计算真正因为原本缺失而被成功补全的字段
         actually_filled = [k for k in found_data.keys() if record.get(k) != merged.get(k)]
-        print(f"   ✓ 命中 [{source}] 相似度={score:.1f}%  实际补全: {actually_filled}")
+        
+        # 检查核心字段是否由于网上的数据里也没有，导致最后依然没补全
+        still_missing = []
+        if "journal_name" in missing_fields and "journal_name" not in actually_filled:
+            still_missing.append("期刊/会议名")
+        if "start_page" in missing_fields and "start_page" not in actually_filled:
+            still_missing.append("页码")
+            
+        if still_missing:
+            print(f"   ⚠️ 命中 [{source}] 相似度={score:.1f}% 实际补全: {actually_filled} | ❌ 注意: 依然没找到 {', '.join(still_missing)}！")
+            status_text = f"部分补全(缺{''.join(still_missing)})"
+        else:
+            print(f"   ✓ 命中 [{source}] 相似度={score:.1f}%  实际补全: {actually_filled}")
+            status_text = f"已补全({source},{score:.0f}%)"
 
         updated_records[rec_idx] = merged
         update_xml_record(merged["_xml_rec"], record, merged)
         diff_rows.append(build_diff_row(rec_idx, record, found_data, missing_fields,
-                                        f"已补全({source},{score:.0f}%)"))
+                                        status_text))
 
     # 保存报告
     report_path = input_path.with_name("fix_report.csv")
